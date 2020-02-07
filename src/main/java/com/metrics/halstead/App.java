@@ -20,19 +20,24 @@ import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.JavaCore;
 import java.util.Arrays;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
+import java.io.FileWriter;
+import java.io.BufferedWriter;
+import java.util.Hashtable;
 public class App {
-	//public static void main(String[] args) {
-        //    String str = "someString"; 
-        //    char[] charArray = str.toCharArray();
-        //    parse(charArray);
-        // }
 	// construct AST of the .java files	
-	public static ASTVisitorMod parse(char[] str) {
-		ASTParser parser = ASTParser.newParser(AST.JLS3); 
+	public static ASTVisitorMod parse(char[] str, String file) {
+		ASTParser parser = ASTParser.newParser(AST.JLS13); 
+
+Hashtable<String, String> options = JavaCore.getDefaultOptions();
+options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_13);
+options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_13);
+
+options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_13);
+parser.setCompilerOptions(options);
+
+
 		parser.setSource(str);
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 		parser.setResolveBindings(true);
@@ -42,21 +47,21 @@ public class App {
 		IProblem[] problems = cu.getProblems();		
 		for(IProblem problem : problems) {
 			// Ignore some error because of the different versions.			
-            if (problem.getID() == 1610613332) 		 // 1610613332 = Syntax error, annotations are only available if source level is 5.0
-                continue;       
-            else if (problem.getID() == 1610613329) // 1610613329 = Syntax error, parameterized types are only available if source level is 5.0
-                continue;
-            else if (problem.getID() == 1610613328) // 1610613328 = Syntax error, 'for each' statements are only available if source level is 5.0
-                continue;
-            else 
-            {
-            	// quit compilation if 
-    	        System.out.println("CompilationUnit problem Message " + problem.getMessage() + " \t At line= "+problem.getSourceLineNumber() + "\t Problem ID="+ problem.getID());            	
+                        if (problem.getID() == 1610613332) 		 // 1610613332 = Syntax error, annotations are only available if source level is 5.0
+                            continue;       
+                        else if (problem.getID() == 1610613329) // 1610613329 = Syntax error, parameterized types are only available if source level is 5.0
+                            continue;
+                        else if (problem.getID() == 1610613328) // 1610613328 = Syntax error, 'for each' statements are only available if source level is 5.0
+                            continue;
+                        else 
+                        {
+                            // quit compilation if 
+    	                    System.out.println(file + "  CompilationUnit problem Message " + problem.getMessage() + " \t At line= "+problem.getSourceLineNumber() + "\t Problem ID="+ problem.getID());            	
     	        
-    	        System.out.println("The program will quit now!");
-    	        System.exit(1);
-            }
-	    }
+                            //System.out.println("The program will quit now!");
+                            //System.exit(1);
+                        }
+	        }
 				
 		// visit nodes of the constructed AST
 		ASTVisitorMod visitor= new ASTVisitorMod();
@@ -122,10 +127,12 @@ public class App {
 			{
 				Files.addAll(retrieveFiles(file.getAbsolutePath()));
 			}
-			if (file.getName().endsWith((".java"))) 
-			{
+			else{
+                            if (file.getName().endsWith((".java"))) 
+			    {
 				Files.add(file.getAbsolutePath());
-			}
+			    }
+                        }
 		}
 
 		return Files;
@@ -156,7 +163,7 @@ public class App {
 		for(int i=0; i<FilesRead.size(); i++)
 		{
 			//System.out.println("Now, AST parsing for : "+ JavaFiles.get(i));
-			ASTVisitorFile=parse(FilesRead.get(i));
+			ASTVisitorFile=parse(FilesRead.get(i), JavaFiles.get(i));
 			DistinctOperators=ASTVisitorFile.oprt.size();
 			DistinctOperands=ASTVisitorFile.names.size();
 
@@ -181,12 +188,13 @@ public class App {
 
 
 
-
-    private static void writeUsingFiles(String data) {
-        try {
-            Files.write(Paths.get("02/halstead_metric.csv"), data.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+public static void writeUsingFiles(String data) throws IOException 
+{
+    BufferedWriter writer = new BufferedWriter(
+                                new FileWriter("02/halstead_metric.csv", true)  //Set true for append mode
+                            );
+    writer.newLine();   //Add new line
+    writer.write(data);
+    writer.close();
+}
 }
