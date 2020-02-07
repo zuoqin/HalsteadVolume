@@ -21,8 +21,8 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import java.util.Arrays;
-
-
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class App {
 	//public static void main(String[] args) {
@@ -116,7 +116,7 @@ public class App {
 			 System.out.println("The provided path is not a valid directory");
 			 System.exit(1);
 		}
-				
+
 		for (File file : dir.listFiles()) {
 			if(file.isDirectory())
 			{
@@ -127,70 +127,66 @@ public class App {
 				Files.add(file.getAbsolutePath());
 			}
 		}
-		
+
 		return Files;
 	}
-	
-	
-	
+
 	public static void main(String[] args) throws IOException {
-		// get the Directory name from the user
 		String DirName=null;
-		//Scanner user_input = new Scanner( System.in );
-		//System.out.print("Enter Directory Name: ");
-		//DirName = user_input.next( );
-		//user_input.close();		
-		//System.out.println("Directory Name is: " + DirName);
-		
+		DirName = args[0];
+
 		// retrieve all .java files in the directory and subdirectories. 
-		List<String> JavaFiles=Arrays.asList(args[0]);
-		
+		List<String> JavaFiles=retrieveFiles(DirName);
+
 		// parse files in a directory to list of char array
-		List<char[]> FilesRead=ParseFilesInDir(JavaFiles);	
-				
-		ASTVisitorMod ASTVisitorFile;		
+		List<char[]> FilesRead=ParseFilesInDir(JavaFiles);
+
+		ASTVisitorMod ASTVisitorFile;
 		int DistinctOperators=0;
 		int DistinctOperands=0;
 		int TotalOperators=0;
 		int TotalOperands=0;
 		int OperatorCount=0;
 		int OperandCount=0;
-		 		
+
 		// Construct the AST of each java file. visit different nodes to get the number of operors and operands
 		// Retrieve the number of distinct operators, distinct operands, 
 		// total operators, and total operands for each .java file in the directory. 
 		// Sum each parameter from different files together to be used in Halstead Complexity metrics. 
 		for(int i=0; i<FilesRead.size(); i++)
-		{	
-			
-			//System.out.println("Now, AST parsing for : "+ JavaFiles.get(i));			
+		{
+			//System.out.println("Now, AST parsing for : "+ JavaFiles.get(i));
 			ASTVisitorFile=parse(FilesRead.get(i));
-			DistinctOperators+=ASTVisitorFile.oprt.size();
-			DistinctOperands+=ASTVisitorFile.names.size();			
-			
+			DistinctOperators=ASTVisitorFile.oprt.size();
+			DistinctOperands=ASTVisitorFile.names.size();
+
 			OperatorCount=0;
-			for (int f : ASTVisitorFile.oprt.values()) {				
-				OperatorCount+= f;			
+			for (int f : ASTVisitorFile.oprt.values()) {
+				OperatorCount+= f;
 			}
-			TotalOperators+=OperatorCount;
+			TotalOperators=OperatorCount;
 			OperandCount=0;
 			for (int f : ASTVisitorFile.names.values()) {
 				OperandCount += f;
 			}
-			TotalOperands+=OperandCount;
+			TotalOperands=OperandCount;
+
+                        HalsteadMetrics hal = new HalsteadMetrics();
+                        hal.setParameters(DistinctOperators, DistinctOperands, TotalOperators, TotalOperands);
+                        double volume = hal.getVolume();
+                        //System.out.println(new String(JavaFiles.get(i)) + ";" + String.valueOf(volume));
+                        writeUsingFiles(new String(JavaFiles.get(i)) + ";" + String.valueOf(volume));
 		}
-		
-		// calculate Halstead Complexity Metrics
-		HalsteadMetrics hal = new HalsteadMetrics();
-		 
-		hal.setParameters(DistinctOperators, DistinctOperands, TotalOperators, TotalOperands);
-		//hal.getVocabulary();
-		//hal.getProglen();
-		//hal.getCalcProgLen();
-		volume = hal.getVolume();
-		//hal.getDifficulty();
-		//hal.getEffort();
-		//hal.getTimeReqProg();
-		//hal.getTimeDelBugs();
 	}
+
+
+
+
+    private static void writeUsingFiles(String data) {
+        try {
+            Files.write(Paths.get("02/halstead_metric.csv"), data.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
